@@ -1,18 +1,27 @@
 # Mini-RAG: Precision-First Multi-Client Knowledge Management
 
-A production-ready Retrieval-Augmented Generation (RAG) system built for consulting firms managing sensitive, isolated client knowledge bases. Delivers precise answers with exact metrics, intelligent source filtering, and multi-document comparative analysis.
+A Retrieval-Augmented Generation (RAG) system built for consulting firms managing sensitive, isolated client knowledge bases. Delivers precise answers with exact metrics, intelligent source filtering, and multi-document comparative analysis.
 
 ---
 
 ## 🎯 Key Features
 
 - ✅ **Multi-Client Isolation** - Physical database separation per client (./clients/{name}/chroma_db/)
+- ✅ **Conversation Persistence** - Chat history saved per client in JSON format with full Q&A tracking
 - ✅ **Precision-First Sources** - Max 3 sources, 50%+ relevance threshold only
 - ✅ **Intelligent Re-Ranking** - Content boosting for numbers (+15%), tables (+12%), comparatives (+10%)
 - ✅ **Hybrid Summarization** - Concise narratives + exact numbers preserved (no rounding)
 - ✅ **Smart Confidence** - 85%+ when correctly identifying missing information
 - ✅ **Comparative Queries** - Multi-document diversity (Q1 AND Q2 representation)
 - ✅ **Robust API Integration** - 5-retry Google API logic, 98%+ success rate
+
+---
+
+## 🔮 Potential Enhancements
+
+- 💬 **Enhanced Chat Interface** - Fixed bottom chat bar with scrollable conversation history
+- ☁️ **Cloud Storage Integration** - Connect to Google Drive, Dropbox, OneDrive for automatic sync
+- 🌍 **Multi-language Support** - Spanish, French, German, Mandarin, Hindi for global accessibility
 
 ---
 
@@ -31,11 +40,11 @@ python run_fastapi.py
 
 ## 📖 How to Use
 
-### 1. Initialize System
+### 1. Configure System
 1. Open http://localhost:8000 in your browser
-2. Click **"Initialize System"**
+2. Click **"Configure System"**
 3. Enter your Google API key
-4. Click **"Initialize"**
+4. Click **"Configure"**
 
 ### 2. Create a Client
 1. In the **Client Management** section, enter client name (e.g., "ACME_Corp")
@@ -167,10 +176,12 @@ See [SETUP.md](SETUP.md) for detailed troubleshooting or [QUICK_REFERENCE.md](QU
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/initialize` | POST | Set Google API key, initialize system |
+| `/configure` | POST | Set Google API key, configure system |
 | `/upload` | POST | Upload documents for current client |
 | `/ask` | POST | Ask question, get answer + sources |
 | `/status` | GET | Check system status, document count |
+| `/documents` | GET | List all documents for current client |
+| `/clear` | POST | Clear all documents for current client |
 
 ### Client Management
 
@@ -179,6 +190,14 @@ See [SETUP.md](SETUP.md) for detailed troubleshooting or [QUICK_REFERENCE.md](QU
 | `/client/set` | POST | Create or switch to client |
 | `/client/list` | GET | List all available clients |
 | `/client/{name}` | DELETE | Delete client and all data |
+
+### Conversation History
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/conversations` | GET | Retrieve conversation history for current client |
+| `/conversations/{id}` | DELETE | Delete specific conversation by ID |
+| `/conversations` | DELETE | Clear all conversations for current client |
 
 **Full API docs**: http://localhost:8000/docs (when server running)
 
@@ -198,10 +217,9 @@ See [SETUP.md](SETUP.md) for detailed troubleshooting or [QUICK_REFERENCE.md](QU
 ## 🚧 Known Limitations
 
 1. **Single user**: No multi-user support (one session at a time)
-2. **No conversation persistence**: Each question is independent
-3. **PDF only**: No JSON, CSV, Excel support (yet)
-4. **English only**: Multilingual embeddings not enabled
-5. **Local only**: No cloud deployment setup
+2. **PDF/TXT/MD only**: No JSON, CSV, Excel support (yet)
+3. **English only**: Multilingual embeddings not enabled
+4. **Local only**: No cloud deployment setup
 
 See **Future Enhancements** in [ARCHITECTURE.md](ARCHITECTURE.md)
 

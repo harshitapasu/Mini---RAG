@@ -8,10 +8,11 @@ This document lists all essential files required for the Mini-RAG system to func
 
 ### Core Application Files
 
-- [x] **`fastapi_app_clean.py`** (721 lines)
+- [x] **`fastapi_app_clean.py`** (934 lines)
   - Main FastAPI application
   - Contains all API endpoints and SimpleRAGSystem class
   - Multi-client management logic
+  - Conversation persistence (JSON storage per client)
   - Source filtering and confidence scoring
 
 - [x] **`run_fastapi.py`** (109 lines)
@@ -56,13 +57,13 @@ This document lists all essential files required for the Mini-RAG system to func
 
 ### Web Interface
 
-- [x] **`static/index.html`** (~1403 lines)
+- [x] **`static/index.html`** (~1411 lines)
   - Complete web UI
   - Client management interface
-  - File upload
+  - File upload with drag-and-drop
   - Question/answer display
   - Source visualization
-  - Conversation history display
+  - Conversation history display with export/delete options
 
 ### Documentation
 
@@ -99,6 +100,12 @@ These directories are automatically created by the system:
   - Client-specific ChromaDB storage
   - Created by: `SimpleRAGSystem.set_client()`
   - Contains: `chroma.sqlite3` + vector index files
+
+- [ ] **`clients/{ClientName}/conversations.json`**
+  - Client-specific conversation history
+  - Created by: `SimpleRAGSystem._save_conversations()`
+  - Auto-loads when switching clients
+  - Stores all Q&A pairs with timestamps
 
 ---
 

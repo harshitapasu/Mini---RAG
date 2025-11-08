@@ -231,6 +231,14 @@ final_confidence = 0.6 × retrieval_confidence + 0.4 × (llm_confidence / 10)
 - **Security**: Runs on localhost only
 - **Production**: Would need authentication, HTTPS, rate limiting
 
+### Conversation Persistence Design
+- **Storage Format**: JSON files per client (`./clients/{name}/conversations.json`)
+- **Auto-save**: After every Q&A interaction
+- **Auto-load**: When switching between clients
+- **Benefits**: Preserves context across sessions, supports conversation export
+- **Trade-off**: File I/O on every question (acceptable for single-user use)
+- **Alternative**: Could use SQLite for better concurrent access
+
 ## 📈 Performance Characteristics
 
 - **Embedding Speed**: ~100 chunks/second (batch processing)
@@ -241,12 +249,9 @@ final_confidence = 0.6 × retrieval_confidence + 0.4 × (llm_confidence / 10)
 
 ## 🔮 Future Enhancements
 
-1. **Conversation Memory**: Track chat history for follow-up questions
-2. **Hybrid Search**: Combine keyword + semantic search
-3. **Re-ranking**: Use cross-encoder for better relevance
-4. **Streaming**: Stream LLM responses token-by-token
-5. **Multi-modal**: Support images in PDFs
-6. **Fine-tuning**: Train custom embedding model on domain data
+1. **Enhanced Chat Interface**: Fixed bottom chat bar with scrollable conversation history for seamless reference to past Q&A
+2. **Cloud Storage Integration**: Connect to Google Drive, Dropbox, OneDrive for automatic document sync alongside local storage
+3. **Multi-language Support**: Internationalization (i18n) for Spanish, French, German, Mandarin, Hindi to expand global accessibility
 
 ---
 
