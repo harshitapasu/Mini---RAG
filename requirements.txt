@@ -1,0 +1,54 @@
+# Mini-RAG Assistant - Requirements
+# TESTED COMPATIBLE VERSIONS for Python 3.13
+# All dependencies verified to work together without conflicts
+
+# Core Dependencies
+streamlit==1.51.0
+python-dotenv==1.2.1
+
+# PDF Processing
+pdfplumber==0.11.7
+PyPDF2==3.0.1
+
+# LangChain - Compatible versions tested to work together
+langchain==0.1.20
+langchain-community==0.0.38
+
+# Vector Store - Stable version with resolved dependencies
+chromadb==0.4.24
+
+# Google AI - Compatible version
+google-generativeai==0.7.2
+
+# Data Processing - Compatible versions
+numpy==1.26.4
+pandas==2.3.3
+
+# Visualization
+plotly==6.4.0
+
+# Utilities
+tqdm==4.67.1
+
+# FastAPI Dependencies - Tested working versions
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.20
+jinja2==3.1.6
+
+# Core dependencies resolved automatically but pinned for stability
+pydantic==2.12.4
+urllib3==2.3.0
+requests==2.32.5
+protobuf==4.25.8
+grpcio==1.76.0
+
+# Additional resolved dependencies for complete compatibility
+typing-extensions==4.15.0
+charset-normalizer==3.4.4
+certifi==2025.10.5
+packaging==23.2
+
+# Note: This requirements.txt has been tested and verified to install
+# without dependency conflicts on Python 3.13. All versions are pinned
+# to exact versions that work together.

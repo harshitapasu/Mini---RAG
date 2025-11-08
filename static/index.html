@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini-RAG Assistant - Local AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1f77b4 0%, #2e8b57 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .privacy-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: inline-block;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+        }
+
+        .content-area {
+            padding: 0 15px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-green { background-color: #28a745; }
+        .status-red { background-color: #dc3545; }
+        .status-yellow { background-color: #ffc107; }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: #1f77b4;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #1f77b4 0%, #2e8b57 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: transform 0.2s;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-1px);
+            background: #5a6268;
+        }
+
+        .document-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background: #f8f9fa;
+        }
+
+        .document-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .document-item:last-child {
+            border-bottom: none;
+        }
+
+        .document-item input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+
+        .document-item label {
+            flex: 1;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .document-name {
+            font-weight: 500;
+        }
+
+        .document-info {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .conversation-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .conversation-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .conversation-item.active {
+            background-color: #e3f2fd;
+            border-color: #1f77b4;
+        }
+
+        .conversation-header {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .conversation-info {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .file-upload:hover {
+            border-color: #1f77b4;
+        }
+
+        .file-upload.dragover {
+            border-color: #1f77b4;
+            background-color: #f8f9ff;
+        }
+
+        .answer-box {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 5px solid #1f77b4;
+        }
+
+        .answer-box h4 {
+            color: #1f77b4;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .answer-content {
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .answer-content p {
+            margin-bottom: 12px;
+        }
+
+        .answer-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .answer-content li {
+            margin-bottom: 5px;
+        }
+
+        .answer-content strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .confidence-box {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .confidence-item {
+            text-align: center;
+        }
+
+        .confidence-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1f77b4;
+        }
+
+        .confidence-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .evaluation-metrics {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #28a745;
+        }
+
+        .evaluation-metrics h4 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .metric-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .metric-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 6px;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 4px;
+        }
+
+        .metric-desc {
+            font-size: 0.8rem;
+            color: #6c757d;
+            line-height: 1.3;
+        }
+
+        .sources {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #1f77b4;
+        }
+
+        .source-item {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+        }
+
+        .source-header {
+            margin-bottom: 10px;
+        }
+
+        .source-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .source-icon {
+            font-size: 1.1rem;
+        }
+
+        .source-title strong {
+            color: #1f77b4;
+            font-size: 1rem;
+        }
+
+        .page-info {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .source-meta {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .relevance-badge {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .content-preview {
+            color: #444;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            padding: 10px;
+            background: #fafafa;
+            border-left: 3px solid #ddd;
+            border-radius: 0 4px 4px 0;
+            font-style: italic;
+            margin-top: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #1f77b4;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1f77b4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .stats {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .metric-item {
+                padding: 12px;
+            }
+            
+            .metric-value {
+                font-size: 1.2rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .confidence-box {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Mini-RAG Assistant</h1>
+            <p>AI-Powered Document Analysis with Comprehensive Evaluation</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <!-- System Status -->
+                <div class="section">
+                    <h3>⚙️ System Status</h3>
+                    <div id="system-status">
+                        <div class="stats">
+                            <div class="stats-item">
+                                <span>Initialized:</span>
+                                <span id="status-display">
+                                    <span class="status-indicator status-red"></span>
+                                    <span id="status-text">Not Ready</span>
+                                </span>
+                            </div>
+                            <div class="stats-item">
+                                <span>Documents:</span>
+                                <span id="doc-status">No documents</span>
+                            </div>
+                            <div class="stats-item">
+                                <span>Total Chunks:</span>
+                                <span id="chunk-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration -->
+                <div class="section">
+                    <h3>🔑 Configuration</h3>
+                    <div class="input-group">
+                        <label for="api-key">Google AI API Key:</label>
+                        <input type="password" id="api-key" placeholder="Enter your Google AI Studio API key">
+                    </div>
+                    <button class="btn" onclick="configureSystem()">Initialize System</button>
+                </div>
+
+                <!-- Client Management -->
+                <div class="section" id="client-section" style="display: none;">
+                    <h3>👥 Client Management</h3>
+                    <div id="current-client-display" style="margin-bottom: 15px; padding: 10px; background: #e8f4f8; border-radius: 8px;">
+                        <strong>Current Client:</strong> <span id="current-client-name" style="color: #1f77b4;">None</span>
+                    </div>
+                    <div class="input-group">
+                        <label for="client-name">Client Name:</label>
+                        <input type="text" id="client-name" placeholder="Enter client name (e.g., Acme Corp)">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <button class="btn" onclick="setClient()" style="flex: 1;">Select/Create Client</button>
+                        <button class="btn-secondary" onclick="loadClientList()" style="flex: 1;">Refresh List</button>
+                    </div>
+                    <div id="client-list-container" style="max-height: 150px; overflow-y: auto;">
+                        <div id="client-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Client list will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conversation Management -->
+                <div class="section">
+                    <h3>💬 Conversations</h3>
+                    <div style="padding: 10px; background: #fff3cd; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; color: #856404;">
+                        ℹ️ <strong>Note:</strong> Conversation history is currently not persisted. Each session starts fresh.
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <button class="btn-secondary" onclick="startNewConversation()">New Conversation</button>
+                        <button class="btn-secondary" onclick="loadConversationHistory()">View History</button>
+                    </div>
+                    <div id="current-conversation" style="display: none;">
+                        <p><strong>Current:</strong> <span id="current-conv-id">None</span></p>
+                        <div style="margin-top: 10px;">
+                            <label>
+                                <input type="checkbox" id="use-context" checked> Use conversation context
+                            </label>
+                        </div>
+                    </div>
+                    <div id="conversation-list" style="display: none; max-height: 200px; overflow-y: auto; margin-top: 10px;">
+                        <!-- Conversation history will be populated here -->
+                        <!-- Each conversation will show: "First question..." as preview -->
+                    </div>
+                </div>
+
+                <!-- File Upload -->
+                <div class="section">
+                    <h3>📁 Upload Documents</h3>
+                    <div class="file-upload" id="file-upload" onclick="document.getElementById('file-input').click()">
+                        <p>📄 Click to select files or drag and drop</p>
+                        <p style="font-size: 0.9rem; color: #666;">Supports PDF, TXT, MD files</p>
+                    </div>
+                    <input type="file" id="file-input" multiple accept=".pdf,.txt,.md" style="display: none;">
+                    <div id="selected-files"></div>
+                    <button class="btn" onclick="uploadDocuments()" id="upload-btn" disabled>Process Documents Locally</button>
+                </div>
+
+                <!-- Actions -->
+                <div class="section">
+                    <h3>🛠️ Actions</h3>
+                    <button class="btn btn-secondary" onclick="clearKnowledgeBase()" id="clear-btn" disabled>🗑️ Clear Local Database</button>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <!-- Document Selection -->
+                <div class="section" id="document-selection" style="display: none;">
+                    <h3>📄 Select Documents (Optional)</h3>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">
+                        Choose specific documents to search in, or leave unselected to search all documents.
+                    </p>
+                    <div id="document-list" class="document-list">
+                        <!-- Documents will be populated here -->
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn-secondary" onclick="selectAllDocuments()">Select All</button>
+                        <button class="btn-secondary" onclick="clearDocumentSelection()">Clear All</button>
+                    </div>
+                </div>
+
+                <!-- Question Input -->
+                <div class="section">
+                    <h3>❓ Ask a Question</h3>
+                    <div class="input-group">
+                        <textarea id="question-input" rows="3" placeholder="What would you like to know from the documents?"></textarea>
+                    </div>
+                    <button class="btn" onclick="askQuestion()" id="ask-btn" disabled>🔍 Ask Question</button>
+                </div>
+
+                <!-- Answer Display -->
+                <div id="answer-section" style="display: none;">
+                    <div class="section">
+                        <h3>🤖 Answer</h3>
+                        <div id="answer-content"></div>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div id="messages"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let systemInitialized = false;
+        let currentConversationId = null;
+        let conversations = [];
+
+        // Initialize drag and drop
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileUpload = document.getElementById('file-upload');
+            const fileInput = document.getElementById('file-input');
+
+            // Drag and drop events
+            fileUpload.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileUpload.classList.add('dragover');
+            });
+
+            fileUpload.addEventListener('dragleave', () => {
+                fileUpload.classList.remove('dragover');
+            });
+
+            fileUpload.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileUpload.classList.remove('dragover');
+                fileInput.files = e.dataTransfer.files;
+                updateSelectedFiles();
+            });
+
+            fileInput.addEventListener('change', updateSelectedFiles);
+
+            // Check if system is already initialized
+            checkSystemStatus();
+        });
+
+        function updateSelectedFiles() {
+            const fileInput = document.getElementById('file-input');
+            const selectedFiles = document.getElementById('selected-files');
+            const uploadBtn = document.getElementById('upload-btn');
+
+            if (fileInput.files.length > 0) {
+                let html = '<div style="margin-top: 10px;"><strong>Selected files:</strong><ul>';
+                for (let file of fileInput.files) {
+                    html += `<li>${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</li>`;
+                }
+                html += '</ul></div>';
+                selectedFiles.innerHTML = html;
+                uploadBtn.disabled = !systemInitialized;
+            } else {
+                selectedFiles.innerHTML = '';
+                uploadBtn.disabled = true;
+            }
+        }
+
+        async function configureSystem() {
+            const apiKey = document.getElementById('api-key').value.trim();
+            if (!apiKey) {
+                showAlert('Please enter your Google AI API key', 'error');
+                return;
+            }
+
+            showLoading('Initializing system...');
+
+            try {
+                const response = await fetch('/configure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: apiKey })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    showAlert(errorData.error || `Server error: ${response.status}`, 'error');
+                    return;
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    systemInitialized = true;
+                    updateSystemStatus(true);
+                    showAlert('System initialized successfully!', 'success');
+                    document.getElementById('api-key').value = '';
+                    updateButtons();
+                    
+                    // Show client section
+                    document.getElementById('client-section').style.display = 'block';
+                    
+                    // Load client list
+                    await loadClientList();
+                    
+                    // Load existing documents if any
+                    await loadDocumentList();
+                    await checkSystemStatus();
+                } else {
+                    showAlert(data.error || 'Failed to initialize system', 'error');
+                }
+            } catch (error) {
+                console.error('Configuration error:', error);
+                showAlert('Failed to connect to server: ' + error.message, 'error');
+            }
+
+            hideLoading();
+        }
+
+        async function setClient() {
+            const clientName = document.getElementById('client-name').value.trim();
+            if (!clientName) {
+                showAlert('Please enter a client name', 'warning');
+                return;
+            }
+
+            if (!systemInitialized) {
+                showAlert('Please initialize the system first', 'error');
+                return;
+            }
+
+            showLoading(`Setting up client: ${clientName}...`);
+
+            try {
+                const response = await fetch('/client/set', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_name: clientName })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    document.getElementById('current-client-name').textContent = clientName;
+                    document.getElementById('client-name').value = '';
+                    
+                    // Reload client list and documents
+                    await loadClientList();
+                    await loadDocumentList();
+                    await checkSystemStatus();
+                } else {
+                    showAlert(data.error || 'Failed to set client', 'error');
+                }
+            } catch (error) {
+                console.error('Client setup error:', error);
+                showAlert('Failed to set client: ' + error.message, 'error');
+            }
+
+            hideLoading();
+        }
+
+        async function loadClientList() {
+            try {
+                const response = await fetch('/client/list');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const clientList = document.getElementById('client-list');
+                    
+                    if (data.clients && data.clients.length > 0) {
+                        let html = '';
+                        for (const client of data.clients) {
+                            const isCurrent = client === data.current_client;
+                            html += `
+                                <div style="display: flex; align-items: center; padding: 10px; background: ${isCurrent ? '#d4edda' : '#f8f9fa'}; border-radius: 6px; border: ${isCurrent ? '2px solid #28a745' : '1px solid #dee2e6'};">
+                                    <span style="flex: 1; font-weight: ${isCurrent ? 'bold' : 'normal'};">
+                                        ${isCurrent ? '✓ ' : ''}${client}
+                                    </span>
+                                    ${!isCurrent ? `
+                                        <button class="btn-secondary" style="padding: 5px 10px; font-size: 0.85rem; margin-right: 5px;" onclick="switchToClient('${client}')">
+                                            Switch
+                                        </button>
+                                        <button class="btn-secondary" style="padding: 5px 10px; font-size: 0.85rem; background: #dc3545; border-color: #dc3545;" onclick="deleteClient('${client}')">
+                                            Delete
+                                        </button>
+                                    ` : '<span style="color: #28a745; font-size: 0.85rem;">Active</span>'}
+                                </div>
+                            `;
+                        }
+                        clientList.innerHTML = html;
+                    } else {
+                        clientList.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 20px;">No clients yet. Create one above.</p>';
+                    }
+                    
+                    // Update current client display
+                    if (data.current_client) {
+                        document.getElementById('current-client-name').textContent = data.current_client;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load client list:', error);
+            }
+        }
+
+        async function switchToClient(clientName) {
+            if (confirm(`Switch to client: ${clientName}?`)) {
+                document.getElementById('client-name').value = clientName;
+                await setClient();
+            }
+        }
+
+        async function deleteClient(clientName) {
+            if (confirm(`⚠️ Delete client "${clientName}" and all their documents?\n\nThis action cannot be undone!`)) {
+                showLoading('Deleting client...');
+                
+                try {
+                    const response = await fetch(`/client/${encodeURIComponent(clientName)}`, {
+                        method: 'DELETE'
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                        await loadClientList();
+                        await checkSystemStatus();
+                    } else {
+                        showAlert(data.error || 'Failed to delete client', 'error');
+                    }
+                } catch (error) {
+                    console.error('Delete error:', error);
+                    showAlert('Failed to delete client: ' + error.message, 'error');
+                }
+                
+                hideLoading();
+            }
+        }
+
+        async function uploadDocuments() {
+            const fileInput = document.getElementById('file-input');
+            if (fileInput.files.length === 0) {
+                showAlert('Please select files to upload', 'warning');
+                return;
+            }
+
+            showLoading('Processing documents locally...');
+
+            const formData = new FormData();
+            for (let file of fileInput.files) {
+                formData.append('files', file);
+            }
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(`Successfully processed ${data.processed_files} documents`, 'success');
+                    document.getElementById('chunk-count').textContent = data.total_chunks;
+                    updateDocumentStatus(data.processed_files);
+                    fileInput.value = '';
+                    updateSelectedFiles();
+                    
+                    // Refresh document list and system status
+                    await loadDocumentList();
+                    await checkSystemStatus();
+                } else {
+                    showAlert(data.error || 'Failed to process documents', 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to upload documents', 'error');
+            }
+
+            hideLoading();
+        }
+
+        async function askQuestion() {
+            const question = document.getElementById('question-input').value.trim();
+            if (!question) {
+                showAlert('Please enter a question', 'warning');
+                return;
+            }
+
+            showLoading('Analyzing documents and generating answer...');
+
+            const useContext = document.getElementById('use-context')?.checked || false;
+            const selectedDocs = getSelectedDocuments();
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: question,
+                        conversation_id: currentConversationId,
+                        use_context: useContext,
+                        selected_documents: selectedDocs
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayAnswer(data);
+                    currentConversationId = data.conversation_id;
+                    updateCurrentConversation();
+                    document.getElementById('question-input').value = '';
+                } else {
+                    showAlert(data.error || 'Failed to process question', 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to get answer', 'error');
+            }
+
+            hideLoading();
+        }
+
+        function displayAnswer(data) {
+            const answerSection = document.getElementById('answer-section');
+            const answerContent = document.getElementById('answer-content');
+
+            let html = `
+                <div class="answer-box">
+                    <h4>📖 Answer</h4>
+                    <div class="answer-content">${formatAnswer(data.answer)}</div>
+                </div>
+            `;
+
+            // Add confidence scores
+            if (data.confidence_score !== undefined || data.retrieval_confidence !== undefined) {
+                html += `
+                    <div class="confidence-box">
+                        <div class="confidence-item">
+                            <div class="confidence-value">${Math.round((data.confidence_score || 0) * 100)}%</div>
+                            <div class="confidence-label">Answer Confidence</div>
+                        </div>
+                        <div class="confidence-item">
+                            <div class="confidence-value">${Math.round((data.retrieval_confidence || 0) * 100)}%</div>
+                            <div class="confidence-label">Source Relevance</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add evaluation metrics
+            if (data.evaluation_metrics) {
+                const metrics = data.evaluation_metrics;
+                html += `
+                    <div class="evaluation-metrics">
+                        <h4>📊 Evaluation Metrics</h4>
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-value">${metrics.precision_at_k.toFixed(3)}</div>
+                                <div class="metric-label">Precision@K</div>
+                                <div class="metric-desc">Accuracy of top retrieved sources</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">${metrics.grounding_accuracy.toFixed(3)}</div>
+                                <div class="metric-label">Grounding Accuracy</div>
+                                <div class="metric-desc">Answer supported by sources</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Check if answer is irrelevant (contains phrases indicating no information)
+            const answerLower = data.answer.toLowerCase();
+            const isIrrelevant = answerLower.includes('no information') || 
+                                 answerLower.includes('not contain') ||
+                                 answerLower.includes('does not contain') ||
+                                 answerLower.includes('doesn\'t contain') ||
+                                 answerLower.includes('no relevant information') ||
+                                 answerLower.includes('cannot answer') ||
+                                 answerLower.includes('unable to answer') ||
+                                 (data.confidence_score && data.confidence_score < 0.3);
+
+            // Add sources (only show if relevant and answer is not irrelevant)
+            if (!isIrrelevant && data.sources && data.sources.length > 0) {
+                // Filter sources with relevance > 0.3 (30%)
+                const relevantSources = data.sources.filter(s => s.relevance_score > 0.3);
+                
+                if (relevantSources.length > 0) {
+                    html += `
+                        <div class="sources">
+                            <h4>📚 Sources (${relevantSources.length})</h4>
+                    `;
+
+                    relevantSources.forEach((source, index) => {
+                        const relevanceScore = Math.round((source.relevance_score || 0) * 100);
+                        const pageInfo = source.page ? ` - Page ${source.page}` : '';
+                        
+                        html += `
+                            <div class="source-item">
+                                <div class="source-header">
+                                    <div class="source-title">
+                                        <span class="source-icon">📄</span>
+                                        <strong>${source.source}</strong>${pageInfo}
+                                    </div>
+                                    <div class="source-meta">
+                                        <span class="relevance-badge">Relevance: ${relevanceScore}%</span>
+                                    </div>
+                                </div>
+                                <div class="content-preview">${source.content}</div>
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                }
+            }
+
+            answerContent.innerHTML = html;
+            answerSection.style.display = 'block';
+            answerSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function formatAnswer(answer) {
+            // Remove any CONFIDENCE: lines
+            answer = answer.replace(/CONFIDENCE:\s*\d+\/10/gi, '').trim();
+            
+            // Split into lines for better processing
+            let lines = answer.split('\n');
+            let formatted = '';
+            let inList = false;
+            let inNumberedList = false;
+            
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                
+                if (!line) {
+                    // Empty line - close any open lists and add paragraph break
+                    if (inList) {
+                        formatted += '</ul>';
+                        inList = false;
+                    }
+                    if (inNumberedList) {
+                        formatted += '</ol>';
+                        inNumberedList = false;
+                    }
+                    formatted += '<br>';
+                    continue;
+                }
+                
+                // Check for bullet points (-, •, *, or ○)
+                if (line.match(/^[-•*○]\s+/)) {
+                    if (!inList) {
+                        formatted += '<ul>';
+                        inList = true;
+                    }
+                    line = line.replace(/^[-•*○]\s+/, '');
+                    formatted += '<li>' + formatInlineStyles(line) + '</li>';
+                }
+                // Check for numbered lists
+                else if (line.match(/^\d+\.\s+/)) {
+                    if (!inNumberedList) {
+                        formatted += '<ol>';
+                        inNumberedList = true;
+                    }
+                    line = line.replace(/^\d+\.\s+/, '');
+                    formatted += '<li>' + formatInlineStyles(line) + '</li>';
+                }
+                // Regular paragraph
+                else {
+                    if (inList) {
+                        formatted += '</ul>';
+                        inList = false;
+                    }
+                    if (inNumberedList) {
+                        formatted += '</ol>';
+                        inNumberedList = false;
+                    }
+                    formatted += '<p>' + formatInlineStyles(line) + '</p>';
+                }
+            }
+            
+            // Close any remaining lists
+            if (inList) formatted += '</ul>';
+            if (inNumberedList) formatted += '</ol>';
+            
+            return formatted;
+        }
+        
+        function formatInlineStyles(text) {
+            // Convert markdown-like inline formatting
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`(.*?)`/g, '<code>$1</code>');
+        }
+
+        async function clearKnowledgeBase() {
+            if (!confirm('⚠️ Are you sure you want to clear the entire knowledge base?\n\nThis will delete ALL documents and cannot be undone!')) {
+                return;
+            }
+
+            showLoading('Clearing knowledge base...');
+
+            try {
+                const response = await fetch('/clear', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Knowledge base cleared successfully', 'success');
+                    
+                    // Reset all displays
+                    document.getElementById('chunk-count').textContent = '0';
+                    updateDocumentStatus(0);
+                    document.getElementById('document-selection').style.display = 'none';
+                    
+                    // Reload document list and status
+                    await loadDocumentList();
+                    await checkSystemStatus();
+                } else {
+                    showAlert(data.error || 'Failed to clear knowledge base', 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to clear knowledge base', 'error');
+            }
+
+            hideLoading();
+        }
+
+        async function startNewConversation() {
+            currentConversationId = null;
+            updateCurrentConversation();
+            showAlert('Started new conversation', 'success');
+        }
+
+        async function loadConversationHistory() {
+            try {
+                const response = await fetch('/conversations');
+                const data = await response.json();
+                
+                if (data.success) {
+                    conversations = data.conversations;
+                    displayConversationHistory();
+                }
+            } catch (error) {
+                showAlert('Failed to load conversation history', 'error');
+            }
+        }
+
+        function displayConversationHistory() {
+            const conversationList = document.getElementById('conversation-list');
+            
+            if (conversations.length === 0) {
+                conversationList.innerHTML = '<p style="color: #666; text-align: center;">No conversations yet</p>';
+            } else {
+                let html = '';
+                conversations.forEach(conv => {
+                    const isActive = conv.id === currentConversationId ? 'active' : '';
+                    // Use first_question as preview, or title as fallback
+                    const preview = conv.first_question || conv.title || 'Untitled conversation';
+                    const truncatedPreview = preview.length > 60 ? preview.substring(0, 60) + '...' : preview;
+                    
+                    html += `
+                        <div class="conversation-item ${isActive}" onclick="selectConversation('${conv.id}')">
+                            <div class="conversation-header" style="font-weight: 500; margin-bottom: 4px; color: #333;">
+                                "${truncatedPreview}"
+                            </div>
+                            <div class="conversation-info" style="font-size: 0.85rem; color: #666;">
+                                ${conv.message_count} messages • ${new Date(conv.created_at).toLocaleDateString()}
+                            </div>
+                        </div>
+                    `;
+                });
+                conversationList.innerHTML = html;
+            }
+            
+            conversationList.style.display = 'block';
+        }
+
+        function selectConversation(conversationId) {
+            currentConversationId = conversationId;
+            updateCurrentConversation();
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.conversation-item').classList.add('active');
+        }
+
+        function updateCurrentConversation() {
+            const currentConv = document.getElementById('current-conversation');
+            const currentConvId = document.getElementById('current-conv-id');
+            
+            if (currentConversationId) {
+                currentConvId.textContent = currentConversationId.substring(0, 8) + '...';
+                currentConv.style.display = 'block';
+            } else {
+                currentConvId.textContent = 'None';
+                currentConv.style.display = 'none';
+            }
+        }
+
+        async function loadDocumentList() {
+            try {
+                const response = await fetch('/documents');
+                const data = await response.json();
+                
+                if (data.success && data.documents.length > 0) {
+                    displayDocumentList(data.documents);
+                    document.getElementById('document-selection').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Failed to load document list:', error);
+            }
+        }
+
+        function displayDocumentList(documents) {
+            const documentList = document.getElementById('document-list');
+            let html = '';
+            
+            documents.forEach(doc => {
+                html += `
+                    <div class="document-item">
+                        <input type="checkbox" id="doc-${doc.filename}" checked>
+                        <label for="doc-${doc.filename}">
+                            <span class="document-name">${doc.filename}</span>
+                            <span class="document-info">${doc.chunk_count} chunks</span>
+                        </label>
+                    </div>
+                `;
+            });
+            
+            documentList.innerHTML = html;
+        }
+
+        function getSelectedDocuments() {
+            const checkboxes = document.querySelectorAll('#document-list input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.id.replace('doc-', ''));
+        }
+
+        function selectAllDocuments() {
+            document.querySelectorAll('#document-list input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+        }
+
+        function clearDocumentSelection() {
+            document.querySelectorAll('#document-list input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+        }
+
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                
+                if (data.initialized) {
+                    systemInitialized = true;
+                    updateSystemStatus(true);
+                    updateButtons();
+                    
+                    // Show client section if initialized
+                    document.getElementById('client-section').style.display = 'block';
+                    
+                    // Update client information
+                    if (data.current_client) {
+                        document.getElementById('current-client-name').textContent = data.current_client;
+                    }
+                    
+                    // Load client list
+                    if (data.available_clients && data.available_clients.length > 0) {
+                        await loadClientList();
+                    }
+                    
+                    // Update document count and chunks
+                    if (data.document_count > 0) {
+                        updateDocumentStatus(data.document_count);
+                        document.getElementById('chunk-count').textContent = data.total_chunks;
+                    }
+                    
+                    // Always try to load document list if system is initialized
+                    await loadDocumentList();
+                } else {
+                    systemInitialized = false;
+                    updateSystemStatus(false);
+                    updateButtons();
+                }
+            } catch (error) {
+                console.log('System not initialized');
+                systemInitialized = false;
+                updateSystemStatus(false);
+            }
+        }
+
+        function updateSystemStatus(initialized) {
+            const statusIndicator = document.querySelector('#system-status .status-indicator');
+            const statusText = document.getElementById('status-text');
+            
+            if (statusIndicator && statusText) {
+                if (initialized) {
+                    statusIndicator.className = 'status-indicator status-green';
+                    statusText.textContent = 'Ready';
+                } else {
+                    statusIndicator.className = 'status-indicator status-red';
+                    statusText.textContent = 'Not Ready';
+                }
+            }
+        }
+
+        function updateDocumentStatus(count) {
+            const docStatus = document.getElementById('doc-status');
+            if (docStatus) {
+                docStatus.textContent = count > 0 ? `${count} documents loaded` : 'No documents';
+            }
+        }
+
+        function updateButtons() {
+            const uploadBtn = document.getElementById('upload-btn');
+            const askBtn = document.getElementById('ask-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            
+            if (systemInitialized) {
+                uploadBtn.disabled = document.getElementById('file-input').files.length === 0;
+                askBtn.disabled = false;
+                clearBtn.disabled = false;
+            }
+        }
+
+        function showAlert(message, type) {
+            const messages = document.getElementById('messages');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            messages.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        function showLoading(message) {
+            const messages = document.getElementById('messages');
+            const loading = document.createElement('div');
+            loading.className = 'loading';
+            loading.id = 'loading-indicator';
+            loading.innerHTML = `
+                <div class="spinner"></div>
+                <p>${message}</p>
+            `;
+            
+            messages.appendChild(loading);
+        }
+
+        function hideLoading() {
+            const loading = document.getElementById('loading-indicator');
+            if (loading) {
+                loading.remove();
+            }
+        }
+    </script>
+</body>
+</html>

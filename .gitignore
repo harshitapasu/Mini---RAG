@@ -1,0 +1,56 @@
+# Ignore Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environment
+venv/
+.venv/
+.venv_test/
+env/
+ENV/
+
+# Chroma database (legacy)
+chroma_db/
+
+# Client databases and data
+clients/
+
+# Conversation histories
+conversations.json
+
+# Environment variables
+.env
+
+# Uploaded files (if you want to ignore them)
+knowledge_base/*.pdf
+knowledge_base/*.txt
+knowledge_base/*.md
+
+# Keep the directory
+!knowledge_base/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit (legacy)
+.streamlit/
+
+# Logs
+*.log
+
+# Backup files
+*.bak
+*_OLD*
+*_BACKUP*
+ARCHITECTURE_OLD.md
+README_OLD_BACKUP.md
