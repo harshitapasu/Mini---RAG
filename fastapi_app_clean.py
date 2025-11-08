@@ -106,6 +106,7 @@ class SimpleRAGSystem:
         """Get path to conversation history file for current client."""
         if not self.current_client:
             return Path("conversations.json")
+        # Ensure client directory exists before returning path
         client_dir = Path(self.clients_dir) / self.current_client
         client_dir.mkdir(parents=True, exist_ok=True)
         return client_dir / "conversations.json"
@@ -140,6 +141,7 @@ class SimpleRAGSystem:
         if conversation_id not in self.conversations:
             self.conversations[conversation_id] = []
         
+        # Store conversation entry with metadata
         self.conversations[conversation_id].append({
             "timestamp": datetime.now().isoformat(),
             "question": question,
@@ -149,6 +151,7 @@ class SimpleRAGSystem:
             "sources": sources[:3]  # Store top 3 sources only to save space
         })
         
+        # Persist to disk after every addition
         self._save_conversations()
     
     def get_conversation_history(self, conversation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -185,12 +188,12 @@ class SimpleRAGSystem:
             # Store API key
             self.api_key = api_key.strip()
             
-            # Test API key first
+            # Test API key validation with Google AI
             print("Testing Google AI API key...")
             import google.generativeai as genai
             genai.configure(api_key=self.api_key)
             
-            # Quick API test
+            # Quick API test - list models to verify authentication
             try:
                 # Try to access models to validate key
                 models = list(genai.list_models())
@@ -211,12 +214,13 @@ class SimpleRAGSystem:
                 google_api_key=self.api_key
             )
             
-            # Try to load existing vectorstore
+            # Try to load existing vectorstore if available
             print("Checking for existing vector database...")
             if self.vectorstore_manager.load_vectorstore():
                 print("Existing vector database loaded successfully")
                 vectorstore = self.vectorstore_manager.get_vectorstore()
                 if vectorstore:
+                    # Initialize retriever with loaded vectorstore
                     self.retriever = DocumentRetriever(vectorstore)
                     self.documents_loaded = True
                     stats = self.vectorstore_manager.get_stats()
@@ -281,12 +285,12 @@ class SimpleRAGSystem:
         if not self.initialized:
             return False, "System not initialized. Configure API key first."
         
-        # Sanitize client name
+        # Sanitize client name - remove invalid characters
         client_name = client_name.strip().replace(" ", "_").replace("/", "_").replace("\\", "_")
         if not client_name:
             return False, "Invalid client name"
         
-        # Store previous client to save conversations
+        # Store previous client to save conversations before switching
         previous_client = self.current_client
         
         try:
@@ -300,12 +304,12 @@ class SimpleRAGSystem:
             if previous_client and previous_client != client_name:
                 self._save_conversations()
             
-            # Update current client
+            # Update current client and prepare database path
             self.current_client = client_name
             client_db_path = self._get_client_db_path()
             print(f"Client DB path: {client_db_path}")
             
-            # Reinitialize vector store for new client
+            # Reinitialize vector store for new client (multi-client isolation)
             print(f"Switching to client: {client_name}")
             self.vectorstore_manager = VectorStoreManager(
                 persist_directory=client_db_path,
@@ -578,27 +582,30 @@ async def upload_documents(files: List[UploadFile] = File(...)):
         total_chunks = 0
         
         for file in files:
+            # Only accept PDF, TXT, and Markdown files
             if file.content_type not in ["application/pdf", "text/plain", "text/markdown"]:
                 continue
             
-            # Save uploaded file temporarily
+            # Save uploaded file temporarily for processing
             with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as tmp:
                 content = await file.read()
                 tmp.write(content)
                 tmp_path = tmp.name
             
             try:
-                # Process file using the correct method
+                # Process file: extract text and create chunks
                 chunks = loader.load_and_chunk_file(tmp_path, file.filename)
                 
-                # Add to vector store
+                # Add chunks to vector store with embeddings
                 if chunks:
                     if not rag_system.vectorstore_manager.vectorstore:
+                        # Create new vectorstore if doesn't exist
                         rag_system.vectorstore_manager.create_vectorstore(chunks)
                     else:
+                        # Add to existing vectorstore
                         rag_system.vectorstore_manager.add_documents(chunks)
                     
-                    # Update retriever
+                    # Update retriever with new documents
                     vectorstore = rag_system.vectorstore_manager.get_vectorstore()
                     rag_system.retriever = DocumentRetriever(vectorstore)
                     rag_system.documents_loaded = True
@@ -607,7 +614,7 @@ async def upload_documents(files: List[UploadFile] = File(...)):
                     total_chunks += len(chunks)
                 
             finally:
-                # Clean up temp file
+                # Clean up temporary file
                 if os.path.exists(tmp_path):
                     os.unlink(tmp_path)
         
@@ -636,7 +643,7 @@ async def ask_question(request: QuestionRequest):
         # Use higher k value for better retrieval (especially for comparative questions)
         retrieval_k = max(request.k, 5)  # Minimum 5 chunks for comprehensive answers
         
-        # Retrieve relevant documents
+        # Step 1: Retrieve relevant documents using semantic search
         retrieved_docs, retrieval_confidence = rag_system.retriever.retrieve(
             request.question, 
             k=retrieval_k,
@@ -646,10 +653,10 @@ async def ask_question(request: QuestionRequest):
         if not retrieved_docs:
             raise HTTPException(status_code=404, detail="No relevant documents found")
         
-        # Prepare context
+        # Step 2: Prepare context from retrieved chunks
         context = "\n\n".join([doc["content"] for doc in retrieved_docs])
         
-        # Generate answer
+        # Step 3: Generate answer using LLM with context
         answer, llm_confidence, final_confidence = rag_system.generator.generate_answer(
             request.question,
             context,
@@ -680,14 +687,14 @@ async def ask_question(request: QuestionRequest):
         has_no_reference = any(phrase in answer_lower for phrase in no_reference_phrases)
         
         # If answer correctly states there's no information, boost confidence
-        # This is actually a GOOD answer - the system correctly identified the documents don't contain this info
+        # This is actually a GOOD answer - the system correctly identified missing info
         if has_no_reference:
             # Set high confidence since this is the correct answer
             final_confidence = max(final_confidence, 0.85)
             llm_confidence = max(llm_confidence, 9.0)
         
-        # Filter sources - only show max 3 sources with HIGH relevance (> 50%)
-        # Be very strict - if sources aren't highly relevant, don't show them
+        # Step 4: Filter and prepare sources for response
+        # Only show max 3 sources with HIGH relevance (> 50%)
         # If answer indicates no reference, don't show any sources
         relevance_threshold = 0.50
         max_sources = 3
@@ -701,7 +708,7 @@ async def ask_question(request: QuestionRequest):
                 if doc["score"] < relevance_threshold:
                     continue
                 
-                # Limit to max 3 sources
+                # Limit to max 3 sources for clarity
                 if len(sources) >= max_sources:
                     break
                     
@@ -710,15 +717,15 @@ async def ask_question(request: QuestionRequest):
                 # Ensure chunk_id is a string
                 chunk_id_str = str(chunk_id) if chunk_id is not None else f"chunk_{i}"
                 
-                # Get page number if available
+                # Get page number if available (for PDFs)
                 page_num = metadata.get("page")
                 
-                # Get first few lines of content for preview (up to 200 chars for cleaner display)
+                # Create content preview (200 chars) for display
                 content = doc["content"]
                 preview_length = 200
                 content_preview = content[:preview_length]
                 if len(content) > preview_length:
-                    # Try to end at a sentence or word boundary
+                    # Try to end at a sentence or word boundary for cleaner preview
                     last_period = content_preview.rfind('.')
                     last_space = content_preview.rfind(' ')
                     if last_period > preview_length - 50:
@@ -737,10 +744,10 @@ async def ask_question(request: QuestionRequest):
                 ))
         
         # Sources will be empty if:
-        # 1. Answer indicates no reference found
+        # 1. Answer indicates no reference found (correct negative)
         # 2. No sources meet the 50% threshold
         
-        # Calculate evaluation metrics
+        # Step 5: Calculate evaluation metrics
         # Precision@K: What percentage of retrieved sources are highly relevant?
         # Use adaptive threshold based on top source quality
         if sources:
@@ -762,7 +769,7 @@ async def ask_question(request: QuestionRequest):
         # Generate conversation ID if not provided
         conversation_id = request.conversation_id or str(uuid.uuid4())
         
-        # Save to conversation history
+        # Step 6: Save Q&A to conversation history for context tracking
         rag_system._add_to_conversation(
             conversation_id=conversation_id,
             question=request.question,
@@ -823,14 +830,14 @@ async def clear_knowledge_base():
             # Delete all documents from the collection instead of deleting files
             try:
                 collection = rag_system.vectorstore_manager.vectorstore._collection
-                # Get all IDs
+                # Get all document IDs
                 all_data = collection.get()
                 if all_data and 'ids' in all_data and all_data['ids']:
-                    # Delete all documents
+                    # Delete all documents by ID
                     collection.delete(ids=all_data['ids'])
                     print(f"Deleted {len(all_data['ids'])} documents from ChromaDB")
                 
-                # Reset the vectorstore reference
+                # Reset the vectorstore reference to clear memory
                 rag_system.vectorstore_manager.vectorstore = None
                 rag_system.retriever = None
                 rag_system.documents_loaded = False

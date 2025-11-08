@@ -98,21 +98,21 @@ Sources: (none shown - correct behavior)
 ```
 User Question
     ↓
-[1] Comparative Detection → "Q1 and Q2" detected → Search 4x chunks
+[1] Query Analysis → Detect comparative keywords ("Q1 vs Q2", "changed")
     ↓
-[2] Vector Search → ChromaDB L2 distance → Top 20 chunks
+[2] Vector Search → ChromaDB semantic similarity → Retrieve top chunks
     ↓
 [3] Re-Ranking → Content boosting (numbers +15%, tables +12%)
     ↓
-[4] Source Diversity → Alternate Q1/Q2 chunks for comparisons
+[4] Source Diversity → Ensure multi-document representation for comparisons
     ↓
-[5] LLM Generation → Gemini 2.0 Flash → Summarize + exact numbers
+[5] LLM Generation → Gemini 2.0 Flash → Summarize + preserve exact numbers
     ↓
-[6] Confidence Boost → "No info found" → 85%+ confidence
+[6] Confidence Scoring → Weighted formula (retrieval + LLM self-assessment)
     ↓
-[7] Source Filtering → Max 3 sources, 50%+ relevance only
+[7] Source Filtering → Max 3 sources, 50%+ relevance threshold
     ↓
-Response: Answer + Confidence + Sources + Metrics
+Response: Answer + Confidence + Sources + Metadata
 ```
 
 **Full architecture**: See [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -246,22 +246,7 @@ This is a demonstration project. For production use:
 
 ---
 
-## 📄 License
-
-MIT License - Free to use, modify, and distribute
-
----
-
-## 🙏 Acknowledgments
-
-- **Google Generative AI**: Gemini 2.0 Flash, text-embedding-004
-- **ChromaDB**: Lightweight vector database
-- **LangChain**: Document processing utilities
-- **FastAPI**: Modern Python web framework
-
----
-
-## 📞 Support
+## � Support
 
 - **Setup**: [SETUP.md](SETUP.md) - Detailed installation guide
 - **Quick Reference**: [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Command cheat sheet
